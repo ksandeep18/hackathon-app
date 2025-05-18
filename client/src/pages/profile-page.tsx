@@ -42,6 +42,41 @@ export default function ProfilePage() {
     bio: user?.bio || ""
   });
   
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (profileData: typeof profileForm) => {
+      const res = await apiRequest("PUT", "/api/user", profileData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update profile",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleProfileUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateProfileMutation.mutate(profileForm);
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setProfileForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
   // Fetch user's listings
   const { data: userListings, isLoading: isLoadingListings } = useQuery<Product[]>({
     queryKey: ['/api/user/products'],
@@ -269,32 +304,52 @@ export default function ProfilePage() {
                     </div>
                     
                     {/* Profile Form */}
-                    <div className="grid grid-cols-1 gap-4">
+                    <form onSubmit={handleProfileUpdate} className="grid grid-cols-1 gap-4">
                       <div className="space-y-2">
                         <label htmlFor="fullName" className="text-sm font-medium text-neutral-darkest">Full Name</label>
-                        <Input id="fullName" defaultValue={user.fullName || ""} placeholder="Your full name" />
+                        <Input 
+                          id="fullName" 
+                          name="fullName"
+                          value={profileForm.fullName} 
+                          onChange={handleInputChange}
+                          placeholder="Your full name" 
+                        />
                       </div>
                       
                       <div className="space-y-2">
                         <label htmlFor="email" className="text-sm font-medium text-neutral-darkest">Email</label>
-                        <Input id="email" defaultValue={user.email || ""} placeholder="Your email address" />
+                        <Input 
+                          id="email" 
+                          name="email"
+                          value={profileForm.email} 
+                          onChange={handleInputChange}
+                          placeholder="Your email address" 
+                        />
                       </div>
                       
                       <div className="space-y-2">
                         <label htmlFor="location" className="text-sm font-medium text-neutral-darkest">Location</label>
-                        <Input id="location" defaultValue={user.location || ""} placeholder="City, State" />
+                        <Input 
+                          id="location" 
+                          name="location"
+                          value={profileForm.location} 
+                          onChange={handleInputChange}
+                          placeholder="City, State" 
+                        />
                       </div>
                       
                       <div className="space-y-2">
                         <label htmlFor="bio" className="text-sm font-medium text-neutral-darkest">About Me</label>
                         <Textarea 
                           id="bio" 
-                          defaultValue={user.bio || ""} 
+                          name="bio"
+                          value={profileForm.bio} 
+                          onChange={handleInputChange}
                           placeholder="Tell others about yourself and your interest in sustainable products"
                           rows={4}
                         />
                       </div>
-                    </div>
+                    </form>
                     
                     {/* Password Change */}
                     <div className="pt-4 border-t">
@@ -318,8 +373,30 @@ export default function ProfilePage() {
                     </div>
                   </CardContent>
                   <CardFooter className="flex justify-end space-x-2">
-                    <Button variant="outline">Cancel</Button>
-                    <Button>Save Changes</Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setProfileForm({
+                        fullName: user?.fullName || "",
+                        email: user?.email || "",
+                        location: user?.location || "",
+                        bio: user?.bio || ""
+                      })}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleProfileUpdate}
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      {updateProfileMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Changes"
+                      )}
+                    </Button>
                   </CardFooter>
                 </Card>
               </TabsContent>
