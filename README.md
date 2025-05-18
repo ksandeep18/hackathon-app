@@ -55,8 +55,7 @@ EcoFinds is a full-stack web application that connects eco-conscious buyers and 
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/ecofinds.git
-   cd ecofinds
+https://github.com/ksandeep18/hackathon-app.git
    ```
 
 2. Install dependencies
