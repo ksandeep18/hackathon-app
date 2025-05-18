@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser, loginUserSchema } from "@shared/schema";
+import { User as SelectUser, loginUserSchema, insertUserSchema } from "@shared/schema";
 import createMemoryStore from "memorystore";
 import { NextFunction, Request, Response } from "express";
 
@@ -78,7 +78,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const validatedData = loginUserSchema.safeParse(req.body);
+      const validatedData = insertUserSchema.safeParse(req.body);
       if (!validatedData.success) {
         return res.status(400).json({ message: "Invalid input data", errors: validatedData.error.errors });
       }
@@ -89,8 +89,8 @@ export function setupAuth(app: Express) {
       }
 
       const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
+        ...validatedData.data,
+        password: await hashPassword(validatedData.data.password),
       });
 
       req.login(user, (err) => {
@@ -142,9 +142,9 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
-      const { fullName, location, bio, email } = req.body;
+      const { full_name, location, bio, email } = req.body;
       const updatedUser = await storage.updateUser(req.user.id, {
-        fullName,
+        full_name,
         location,
         bio,
         email
