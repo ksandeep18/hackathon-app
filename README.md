@@ -37,7 +37,6 @@ EcoFinds is a full-stack web application that connects eco-conscious buyers and 
 - React.js
 - TypeScript
 - TailwindCSS
-- shadcn/ui component library
 - React Query for data fetching
 
 ### Backend
