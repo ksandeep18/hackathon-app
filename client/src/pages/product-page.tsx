@@ -46,6 +46,7 @@ export default function ProductPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [favorite, setFavorite] = useState(false);
+  const [showSellerInfo, setShowSellerInfo] = useState(false);
   
   // Fetch product data
   const { data: product, isLoading, error } = useQuery<Product>({
@@ -362,9 +363,13 @@ export default function ProductPage() {
             
             {/* Action Buttons */}
             <div className="flex items-center gap-4 pt-4">
-              <Button className="flex-1" disabled={isOwner}>
+              <Button 
+                className="flex-1" 
+                disabled={isOwner}
+                onClick={() => setShowSellerInfo(!showSellerInfo)}
+              >
                 <MessageCircle className="mr-2 h-4 w-4" />
-                Contact Seller
+                {showSellerInfo ? "Hide Seller Info" : "Contact Seller"}
               </Button>
               
               {!isOwner && (
@@ -379,6 +384,40 @@ export default function ProductPage() {
                 </Button>
               )}
             </div>
+            
+            {/* Seller Information */}
+            {showSellerInfo && product.seller && (
+              <div className="mt-4 p-4 border border-neutral rounded-lg bg-neutral-lightest">
+                <h3 className="text-lg font-medium text-neutral-darkest mb-2">Seller Information</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <span className="font-medium mr-2">Username:</span>
+                    <span>{product.seller.username}</span>
+                  </div>
+                  {product.seller.email && (
+                    <div className="flex items-center">
+                      <span className="font-medium mr-2">Email:</span>
+                      <span>{product.seller.email}</span>
+                    </div>
+                  )}
+                  {product.seller.location && (
+                    <div className="flex items-center">
+                      <span className="font-medium mr-2">Location:</span>
+                      <span>{product.seller.location}</span>
+                    </div>
+                  )}
+                  <div className="mt-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate(`/profile/${product.seller.id}`)}
+                    >
+                      View Profile
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Not logged in message */}
             {!user && (

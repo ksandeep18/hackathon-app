@@ -41,7 +41,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      res.json(product);
+      // Get seller information for the product
+      const seller = await storage.getUser(product.sellerId);
+      
+      // Return product with seller info (excluding password)
+      const { password, ...sellerInfo } = seller || { password: '', username: 'Unknown', email: '' };
+      res.json({
+        ...product,
+        seller: sellerInfo
+      });
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
