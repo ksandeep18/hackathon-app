@@ -69,7 +69,10 @@ export class DatabaseStorage implements IStorage {
     
     if (params.query) {
       query = query.where(
-        ilike(products.title, `%${params.query}%`)
+        or(
+          ilike(products.title, `%${params.query}%`),
+          ilike(products.description, `%${params.query}%`)
+        )
       );
     }
     
@@ -92,13 +95,15 @@ export class DatabaseStorage implements IStorage {
     }
     
     if (params.certifications && params.certifications.length > 0) {
-      // This is a simplified version since array intersection is complex in SQL
-      // In a real app, you might need a more sophisticated approach
-      for (const cert of params.certifications) {
-        query = query.where(
-          ilike(products.certifications.toString(), `%${cert}%`)
-        );
-      }
+      // Improved array handling for certifications
+      // This still has limitations but works better than the previous version
+      query = query.where(
+        or(
+          ...params.certifications.map(cert => 
+            sql`${products.certifications}::text[] @> array[${cert}]::text[]`
+          )
+        )
+      );
     }
     
     if (params.sellerId) {
@@ -108,6 +113,7 @@ export class DatabaseStorage implements IStorage {
     // Order by newest first
     query = query.orderBy(desc(products.createdAt));
     
+    console.log("Executing search with params:", params);
     return await query;
   }
 
