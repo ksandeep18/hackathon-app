@@ -55,7 +55,7 @@ EcoFinds is a full-stack web application that connects eco-conscious buyers and 
 
 1. Clone the repository
    ```bash
-https://github.com/ksandeep18/hackathon-app.git
+   https://github.com/ksandeep18/hackathon-app.git
    ```
 
 2. Install dependencies
@@ -64,7 +64,7 @@ https://github.com/ksandeep18/hackathon-app.git
    ```
 
 3. Set up your environment variables
-   - Create a `.env` file in the root directory with the following variables:
+   - Create a `.env` file in the server directory with the following variables:
    ```
    DATABASE_URL=postgresql://username:password@localhost:5432/ecofinds
    SESSION_SECRET=your-secret-key
