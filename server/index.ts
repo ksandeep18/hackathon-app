@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Simple route to check if the backend is online
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.send("EcoFinds Backend Online!");
 });
 
