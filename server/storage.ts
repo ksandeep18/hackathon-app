@@ -1,6 +1,6 @@
 import { users, type User, type InsertUser, products, type Product, type InsertProduct, favorites, type Favorite, type SearchProductsInput } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, ilike, between, inArray, desc } from "drizzle-orm";
+import { eq, and, ilike, between, inArray, desc, or, sql, gte, lte } from "drizzle-orm";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
@@ -65,56 +65,132 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchProducts(params: SearchProductsInput): Promise<Product[]> {
+    console.log("Searching with params:", params);
+    
+    // Start with basic query
     let query = db.select().from(products).where(eq(products.active, true));
     
-    if (params.query) {
-      query = query.where(
-        or(
-          ilike(products.title, `%${params.query}%`),
-          ilike(products.description, `%${params.query}%`)
+    // Apply text search if query is provided
+    if (params.query && params.query.trim() !== '') {
+      query = db.select().from(products).where(
+        and(
+          eq(products.active, true),
+          ilike(products.title, `%${params.query}%`)
         )
       );
     }
     
-    if (params.category) {
-      query = query.where(eq(products.category, params.category));
-    }
-    
-    if (params.minPrice !== undefined && params.maxPrice !== undefined) {
-      query = query.where(
-        between(products.price, params.minPrice * 100, params.maxPrice * 100)
+    // Apply category filter
+    if (params.category && params.category.trim() !== '') {
+      query = db.select().from(products).where(
+        and(
+          eq(products.active, true),
+          eq(products.category, params.category)
+        )
       );
-    } else if (params.minPrice !== undefined) {
-      query = query.where(products.price >= params.minPrice * 100);
-    } else if (params.maxPrice !== undefined) {
-      query = query.where(products.price <= params.maxPrice * 100);
     }
     
-    if (params.condition && params.condition.length > 0) {
-      query = query.where(inArray(products.condition, params.condition));
-    }
-    
-    if (params.certifications && params.certifications.length > 0) {
-      // Improved array handling for certifications
-      // This still has limitations but works better than the previous version
-      query = query.where(
-        or(
-          ...params.certifications.map(cert => 
-            sql`${products.certifications}::text[] @> array[${cert}]::text[]`
+    // Apply price range filter
+    if (params.minPrice !== undefined || params.maxPrice !== undefined) {
+      let priceFilter;
+      
+      if (params.minPrice !== undefined && params.maxPrice !== undefined) {
+        priceFilter = between(products.price, params.minPrice * 100, params.maxPrice * 100);
+      } else if (params.minPrice !== undefined) {
+        // Use greater than or equal
+        const minPriceInCents = params.minPrice * 100;
+        priceFilter = sql`${products.price} >= ${minPriceInCents}`;
+      } else if (params.maxPrice !== undefined) {
+        // Use less than or equal
+        const maxPriceInCents = params.maxPrice * 100;
+        priceFilter = sql`${products.price} <= ${maxPriceInCents}`;
+      }
+      
+      if (priceFilter) {
+        query = db.select().from(products).where(
+          and(
+            eq(products.active, true),
+            priceFilter
           )
+        );
+      }
+    }
+    
+    // Apply condition filter
+    if (params.condition && params.condition.length > 0) {
+      query = db.select().from(products).where(
+        and(
+          eq(products.active, true),
+          inArray(products.condition, params.condition)
         )
       );
     }
     
-    if (params.sellerId) {
-      query = query.where(eq(products.sellerId, params.sellerId));
+    // Apply seller filter
+    if (params.sellerId !== undefined) {
+      query = db.select().from(products).where(
+        and(
+          eq(products.active, true),
+          eq(products.sellerId, params.sellerId)
+        )
+      );
     }
     
     // Order by newest first
-    query = query.orderBy(desc(products.createdAt));
+    const result = await db.select()
+      .from(products)
+      .where(eq(products.active, true))
+      .orderBy(desc(products.createdAt));
     
-    console.log("Executing search with params:", params);
-    return await query;
+    // Client-side filtering if needed
+    let filteredResults = result;
+    
+    // Apply text search
+    if (params.query && params.query.trim() !== '') {
+      const searchQuery = params.query.toLowerCase();
+      filteredResults = filteredResults.filter(product => 
+        product.title.toLowerCase().includes(searchQuery) || 
+        product.description.toLowerCase().includes(searchQuery)
+      );
+    }
+    
+    // Apply category filter
+    if (params.category && params.category.trim() !== '') {
+      filteredResults = filteredResults.filter(product => 
+        product.category === params.category
+      );
+    }
+    
+    // Apply price filters
+    if (params.minPrice !== undefined) {
+      const minPriceInCents = params.minPrice * 100;
+      filteredResults = filteredResults.filter(product => 
+        product.price >= minPriceInCents
+      );
+    }
+    
+    if (params.maxPrice !== undefined) {
+      const maxPriceInCents = params.maxPrice * 100;
+      filteredResults = filteredResults.filter(product => 
+        product.price <= maxPriceInCents
+      );
+    }
+    
+    // Apply condition filter
+    if (params.condition && params.condition.length > 0) {
+      filteredResults = filteredResults.filter(product => 
+        params.condition!.includes(product.condition)
+      );
+    }
+    
+    // Apply seller filter
+    if (params.sellerId !== undefined) {
+      filteredResults = filteredResults.filter(product => 
+        product.sellerId === params.sellerId
+      );
+    }
+    
+    return filteredResults;
   }
 
   async createProduct(product: InsertProduct & { sellerId: number }): Promise<Product> {
