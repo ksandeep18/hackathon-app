@@ -11,6 +11,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, userUpdates: Partial<User>): Promise<User>;
   
   // Product methods
   getProduct(id: number): Promise<Product | undefined>;
@@ -56,6 +57,19 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
+  }
+  
+  async updateUser(id: number, userUpdates: Partial<User>): Promise<User> {
+    // Make sure we don't update sensitive fields
+    const { password, id: userId, ...updateData } = userUpdates;
+    
+    const [updatedUser] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning();
+      
+    return updatedUser;
   }
 
   // Product methods

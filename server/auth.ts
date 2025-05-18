@@ -136,6 +136,27 @@ export function setupAuth(app: Express) {
     const { password, ...userWithoutPassword } = req.user;
     res.json(userWithoutPassword);
   });
+  
+  // Update user profile
+  app.put("/api/user", async (req, res, next) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { fullName, location, bio, email } = req.body;
+      const updatedUser = await storage.updateUser(req.user.id, {
+        fullName,
+        location,
+        bio,
+        email
+      });
+      
+      // Don't send password back to client
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   // Middleware to check if user is authenticated
   app.use("/api/protected", (req: Request, res: Response, next: NextFunction) => {

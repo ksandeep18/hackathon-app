@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layouts/main-layout";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Product } from "@shared/schema";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
@@ -31,7 +33,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("listings");
+  const [profileForm, setProfileForm] = useState({
+    fullName: user?.fullName || "",
+    email: user?.email || "",
+    location: user?.location || "",
+    bio: user?.bio || ""
+  });
   
   // Fetch user's listings
   const { data: userListings, isLoading: isLoadingListings } = useQuery<Product[]>({
